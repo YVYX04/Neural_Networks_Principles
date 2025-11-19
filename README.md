@@ -12,8 +12,7 @@ This repository presents the core theoretical principles of neural networks and 
 
 The content is primarily inspired by:
 
-```
-Nielsen, M. A. (2015). *Neural Networks and Deep Learning*. Determination Press.
-```
+
+> Nielsen, M. A. (2015). *Neural Networks and Deep Learning*. Determination Press.
 
 This book provides one of the most accessible introductions to the mathematics and mechanics behind neural networks and serves as the main theoretical foundation for the repository.
