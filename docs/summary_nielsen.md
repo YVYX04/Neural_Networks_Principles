@@ -59,6 +59,229 @@ are we supposed to know which weights to input, what magnitude the bias should t
 
 ### 1.3. Sigmoid Neurons
 
+As we just discovered, we must devise a learning algorithm to tune the weights, bias, and threshold of our neural network. In this section, we add a different building block of neural networks: **sigmoid neurons**. They function excatly as
+perceptrons but their *activation function* is not the step function anymore but
+the **real valued sigmoid function**:
+
+$$
+\sigma(z) = \frac{1}{1 + e^{-z}}, \qquad \sigma : \mathbb{R} \to (0,1).
+$$
+
+This is a mapping of the real line onto the real interval $(0, 1)$. In our case,
+we have:
+
+$$
+z = \sum_{i = 0}^{n} w_i x_i, \quad x_0 = 1, w_0 = b
+$$
+
+or expressed differently:
+
+$$
+z = b + \sum_{i = 1}^{n} x_i w_i
+$$
+
+When we look at the shape of the sigmoid function:
+
+![Sigmoid Function](/images/sigmoid_function.png)
+
+we realize that it could assimilated to a smoothed version of the step function.
+When the weighted sum $z \to - \infty$ we obtain $0$ and when $z \to \infty$ we have $1$. This smoother change implies that the gradient of the output with respect to $\mathbf{w}$ where $w_0 = b$ is lower, thus the change is less abrupt than when we use the step function. (This is also an issue that trigger the *vanishing gradient problem*). The gradient is:
+
+$$
+\begin{align*}
+\nabla_{\mathbf{w}} \sigma(z) 
+&= \nabla_{\mathbf{w}} \left( \frac{1}{1 + e^{-\mathbf{w}^T \mathbf{x}}} \right) \\
+&= \frac{\mathbf{x} e^{-\mathbf{w}^T \mathbf{x}}}{\left(1 + e^{-\mathbf{w}^T \mathbf{x}}\right)^2} \\
+&= \left(\frac{1}{1 + e^{-\mathbf{w}^T \mathbf{x}}}\right)\left(1 - \frac{1}{1 + e^{-\mathbf{w}^T \mathbf{x}}}\right)\mathbf{x} \\
+&= \sigma(z)\bigl(1 - \sigma(z)\bigr)\,\mathbf{x}.
+\end{align*}
+$$
+
+### 1.4. The Architecture of Neural Networks
+
+In this section, we introduce the useful terminology to understand neural
+networks. Generally, a neural network is represented as this:
+
+![neural net schema](/docs/images_doc/nn_schema.png)
+
+The leftmost layer where each node value is given by the component of $\mathbf{x}$
+is called the **input layer**. The rightmost layer contains the output of our neural network; this is the **output layer**. The middle layers are generally 
+referred to as **hidden layers**.
+
+Usually, the design of input and output layers is quite straightforward based on
+the task we want to accomplish. However, the **width** (number of nodes in each hidden layer) and the **depth** (number of hidden layers) is quite hard to fine tune (these are referred to as some **hyperparameters** of our neural network).
+
+Furthermore, in our approach of NNs, we consider them as being **feedorward** neural networks. This means there are no loops in the network: information is always fed forward, never fed back.
+
+### 1.5. A Simple Network to Classify Handwritten Digits
+
+In this first version of the program, we focus on classifying single digits
+and not a string of digits (this would involve a segmentation step first).
+To solve our problem, the structure of our neural network will be:
+
+$$
+(784) \rightarrow (15) \rightarrow (10)
+$$
+
+where each bracket indicates a layer and the number of nodes in it. In the input layer, we have $784$ input nodes since the images we will classify are black and white (i.e. take values between $0$ and $255$) and formatted as $28 \times 28$ pixels so $28^2 = 784$ pixels in total. In the hidden layer, we might experiment with various values of $n$. For the output layer, we number the output neurons from $0$ through $9$, and figure out which neuron has the highest activation value. If that neuron is, say, neuron number $6$, then our network will guess that the input digit was a $6$.
+
+### 1.6. Learning with Gradient Descent
+
+Now that we have a design for our neural network, how can it learn to recognize digits? The first thing we'll need is a data set to learn from - a so-called training data set. We'll use the `mnist` data set. Here are a few samples:
+
+![mnist samples](/images/mnist_samples.png)
+
+The reader can found the code used to load the `mnist` data set and generate the
+above plot in the notebook [load_mnis.ipynb](/notebooks/data/load_mnist.ipynb).
+
+**The Output of our Neural Network**
+
+Once we feed (forward) our NN with the different inputs, we will obtain, in the output layer something like this:
+
+$$
+\hat y = 
+\begin{bmatrix}
+y_0 \\
+y_1 \\
+y_2 \\
+y_3 \\
+y_4 \\
+y_5 \\
+y_6 \\
+y_7 \\
+y_8 \\
+y_9
+\end{bmatrix}
+$$
+
+and, if the class is $i$, we want $\hat y_i$ to be as high as possible and all the others $\hat y_j$, where $j \neq i$ to be as low as possible. I use a hat on top of $y$ to indicate that this is an *estimated* vector.
+
+**Evaluating the Output**
+
+Once we obtained an estimate of the output vector $\hat y$, we want
+to compare it to the correct output vector $y$. This one is a binary vector that could be equal to:
+
+$$
+y^T =
+\begin{bmatrix}
+0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0
+\end{bmatrix}
+$$
+
+meaning here that the true class, the **label** is $2$. Now, to quantify how our estimated vector $\hat y$ performed on a particular instance of the data, we will use a **cost function** $C$ (sometimes called loss function) that takes high value if our estimation $\hat y$ is bad and the value $0$ if it is perfect. Our cost function will be the traditional **mean squared error** (MSE) function:
+
+$$
+C(y^{(i)}, \hat y^{(i)}) = \frac{1}{n} \sum_{i = 0}^{n} \left( \lVert y^{(i)} - \hat y^{(i)} \rVert \right)^2
+$$
+
+here, the index $^{(i)}$ indicates that this is the instance $i$ of the data, not the $i$-th component of the vector and $\lVert v \rVert$
+is simply the euclidean norm of the vector $v$.
+
+Now, the optimization problem we face is:
+
+$$
+\min_{\theta} \; C(\theta)
+= \min_{W,\, b} \; \frac{1}{n} \sum_{i=1}^{n} \lVert y^{(i)} - \hat y^{(i)}(\theta) \rVert^2 .
+$$
+
+where $\theta = (W, b)$, $b$ is the bias, and $W$ is the weight matrix of the neural network.
+When training our NN with mean-squared error, we compute the cost for each image, average over the training batch, and adjust all weights and biases jointly.
+
+We use the MSE function because it is a quadratic function continuously differentiable with a unique minimum. These are nice properties for what is coming next.
+This choice might not be the best but it is sufficient for know.
+
+**Gradient Descent**
+
+We know from calculus that the gradient of a function $\nabla f$ indicates the direction of the steepest ascent. For instance:
+
+$$
+f(x, y) = x^2 + y^2
+$$
+
+we compute the gradient as:
+
+$$
+\nabla f =
+\begin{bmatrix}
+2x \\
+2y
+\end{bmatrix}
+$$
+
+and if we are at $(2, 2)$ in the $(x, y)$ plane, then, we know that the direction of the steepest ascent is given by:
+
+$$
+\nabla f (1, 1) =
+\begin{bmatrix}
+4 \\
+4
+\end{bmatrix}
+= v_1
+$$
+
+To get the steepest descent, we just take the negative of the gradient (recall that we want to minimize our cost function, i.e. go towards the minimum region).
+Visually, I simulated this with a heatmap (code in [GD.ipynb](/notebooks/theory/GD.ipynb)):
+
+![](/images/gradient_descent_heatmap.png)
+
+Here we are taking the negative of the gradient and pointing in the direction of the steepest descent. To minimize our cost function $C$ in function of $\theta$ we are basically going to use the same methodology only this time we scale with a scalar $\eta$ the gradient to adjust the magnitude of our steps towards a minimum.
+$\eta$ is the **learning rate** of our NN and it is also a hyperparameter. At this point, it should be mentioned that the literature covers many ways in which we should perform gradient descent. We limit ourselves to this approach for the moment being.
+
+As for now, it is important to understand that we are going update $\theta$ whith this algorithm:
+
+$$
+\theta_{t + 1} = \theta_t - \eta \cdot \nabla_{\theta} C(\theta_t)
+$$
+
+where $\theta_{t + 1}$ is the "updated" version of $\theta_t$. In the simple gradient descent approach we have:
+
+$$
+\theta_{t+1} = \theta_t - \eta\, \frac{1}{n}\sum_{i=1}^n \nabla_\theta C^{(i)}
+$$
+
+for each time step / updates. This means that we compute the gradient $\nabla_\theta C^{(i)}$ for each training instance $(i)$.
+Unfortunately, when the number of training inputs is very large this can take a long time, and learning thus occurs slowly. Furthermore, this approach is risky since it easily ends up in a local minima instead of a global one.
+Below is a solution generally favored to the classic gradient descent approach.
+
+**Stochastic Gradient Descent**
+
+Unlike full-batch gradient descent—where the gradient is computed using the entire training set—**stochastic gradient descent (SGD)** updates the parameters using only a randomly selected subset of the data at each iteration. This reduces computational cost per update and introduces beneficial noise that can help escape shallow minima. When the subset size $m$ satisfies $1 < m < n$, we speak of **mini-batch gradient descent**.
+
+Suppose we update the parameter vector $\theta$ over $T$ epochs. At iteration $t$, the procedure is:
+
+1. **Random mini-batch selection**  
+   Shuffle the dataset at the start of each epoch and select a subset of \(m\) training instances,  
+   $$
+   X_t = \{x_t^{(1)},\ldots,x_t^{(m)}\}.
+   $$  
+   Here $m \le n$ is the **batch size**, and each $x_t^{(i)}$ is a single training example.
+
+2. **Mini-batch gradient computation**  
+   Estimate the gradient of the cost using only the mini-batch:
+    $$
+   \nabla C(\theta_t)
+   = \frac{1}{m}\sum_{i=1}^{m} 
+   \nabla_{\theta} C\bigl(x_t^{(i)}, \theta_t \bigr).
+    $$
+
+3. **Parameter update rule**  
+   Update the parameters in the direction of steepest descent with learning rate \$\eta$:
+    $$
+    \theta_{t+1}
+    = \theta_t - \eta\,\nabla C(\theta_t).
+    $$
+
+4. **Iteration / early stopping**  
+   Repeat until $t = T$, or stop earlier if a convergence criterion is satisfied  
+   (e.g., $\|\nabla C(\theta_t)\|$ becomes small or validation loss stops improving).
+
+This stochastic approximation makes each update cheaper and often improves generalization by preventing the optimizer from settling too quickly into sharp minima. In practice, stochastic gradient descent is a commonly used and powerful technique for learning in neural networks.
+
+### 1.7. Implementing our Network to Classify Digits
+
+A
+
+
 ## References
 
 - Nielsen, M. A. (2015). *Neural Networks and Deep Learning*. Determination Press. http://neuralnetworksanddeeplearning.com/
