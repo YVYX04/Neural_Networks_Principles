@@ -251,13 +251,16 @@ Suppose we update the parameter vector $\theta$ over $T$ epochs. At iteration $t
 
 1. **Random mini-batch selection**  
    Shuffle the dataset at the start of each epoch and select a subset of $m$ training instances,  
+
 $$
 X_t = \{x_t^{(1)},\ldots,x_t^{(m)}\}.
 $$  
+
    Here $m \le n$ is the **batch size**, and each $x_t^{(i)}$ is a single training example.
 
 2. **Mini-batch gradient computation**  
    Estimate the gradient of the cost using only the mini-batch:
+
 $$
 \nabla C(\theta_t)
 = \frac{1}{m}\sum_{i=1}^{m} 
@@ -266,6 +269,7 @@ $$
 
 3. **Parameter update rule**  
    Update the parameters in the direction of steepest descent with learning rate \$\eta$:
+
 $$
 \theta_{t+1}
 = \theta_t - \eta\,\nabla C(\theta_t).
