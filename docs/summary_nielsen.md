@@ -283,7 +283,101 @@ This stochastic approximation makes each update cheaper and often improves gener
 
 ### 1.7. Implementing our Network to Classify Digits
 
-A
+In this section, we will present the implementation of a program that relies on neural networks and stochastic gradient descent to recognize handwritten digits from the `mnist` data set. I try to consistently use the following notation:
+
+- $k$: lowercase letters are scalar.
+- $\mathbf{v}$: lowercase letters in bold are vectors.
+- $A$: uppercase letters are matrices
+
+Specifically for neural networks ($i \in \{1, \cdots, n\}$) :
+
+- $\mathbf{b}^{(i)}$: bias vector for layer $i$
+- $\mathbf{x}$: input vector without bias
+- $\mathbf{a}^{(i)}$: vector for hidden layer $i$
+- $W^{(i)}$: weight matrix connecting layers $(i - 1), i$
+- $b_j^{(i)}$: is the bias for neuron $j$ in layer $i$
+- $w_{jk}^{(i)}$: weight connecting neuron $k$ in layer $(i - 1)$ and neuron $j$ in layer $i$.
+- $\mathbf{\hat y}, \mathbf{y}$: estimated output vector, output vector
+
+
+**Network**
+
+First, we create the skeleton of the `Network` class member variable:
+
+```python
+class Network:
+    """
+    A simple neural network class inspired by Michael Nielsen's implementation.
+    """
+    # constructor: take numpy array as input for the layers' size
+    def __init__(self, sizes):
+        self.num_layers_ = len(sizes)
+        self.sizes_ = sizes
+
+        # randomly generated biases (from the standard Gaussian distribution)
+        # bias generated for the hidden layers and output layer
+        self.bias_ = [np.random.randn(y, 1) for y in sizes[1:]] 
+
+        # generate the weights
+        self.weights_ = [np.random.randn(y, x) for x, y
+                            in zip(sizes[:-1], sizes[1:])]
+```
+
+As one can see, several member variables are initialized in our `Network` object.
+We pass to the constructor a numpy array named `sizes` as an argument. Then, we
+register the number of layers in `num_layers_` and the number of neurnones in each layer
+in `sizes_`. Once this is done, we need to generate (with list comprehension) the bias vectors for each layer except the input layer. We proceed to create the `weights_` in roughly the same way. At this stage, it is important to note that for instance:
+
+```python
+net = Network([784, 15, 10])
+W_1 = net.weights_[0]
+```
+
+In this context, $W^{(1)}$ is going to be a matrix of weights connecting the input layer $\mathbf{x}$ and the first hidden layer $\mathbf{a}^{(1)}$. For example, if the input layer $\mathbf{x}$ has $4$ neurons and the first hidden layer $\mathbf{a}^{(1)}$ has $3$
+neurons, like on this schema I realized:
+
+![neural net schema](/docs/images_doc/nn_schema_yvan.jpeg)
+
+
+we have:
+
+$$
+W^{(1)} =
+\begin{bmatrix}
+w_{11} & w_{12} & w_{13} & w_{14} \\
+w_{21} & w_{22} & w_{23} & w_{24} \\
+w_{31} & w_{32} & w_{33} & w_{34}
+\end{bmatrix}
+$$
+
+so we see that the first column of $W^{(1)}$ are the weights that connect the first neuron in the input layer (indexed as layer $0$ in my notation) to the first hidden layer
+$\mathbf{a}^{(1)}$. This means that:
+
+$$
+\mathbf{a^{(1)}} = 
+\begin{bmatrix}
+a_1^{(1)} + b^{(1)}_1 \\
+a_2^{(1)} + b^{(1)}_2 \\
+a_3^{(1)} + b^{(1)}_3 \\
+\end{bmatrix}
+= W^{(1)}\mathbf{x} + b^{(1)}
+$$
+
+hence, we see that:
+
+$$
+a_1^{(1)} = \sum_{i = 1}^{4} w_{i,1}x_i + b^{(1)}_1
+$$
+
+This means that the first node of the first hidden layer: $a_1^{(1)}$, is a weighted sum
+of each neuron from the input layer $\mathbf{x}$ plus the bias. As you can see, one might need a little bit of time to accomodate to the notation. Then, once this has been established, the output layer ${\mathbf{y}}$ is obtained through:
+
+$$
+\mathbf{y} = \sigma\bigl(W^{(2)} \mathbf{a}^{(1)} + \mathbf{b}^{(2)}\bigr)
+$$
+
+where $\sigma(\cdot)$ is applied elementwise (we vectorize the function). In the output
+layer, the sigmoid can be replaced by a softmax function.
 
 
 ## References
