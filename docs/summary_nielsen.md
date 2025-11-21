@@ -363,10 +363,10 @@ a_3^{(1)} + b^{(1)}_3 \\
 = W^{(1)}\mathbf{x} + b^{(1)}
 $$
 
-hence, we see that:
+where we have:
 
 $$
-a_1^{(1)} = \sum_{i = 1}^{4} w_{i,1}x_i + b^{(1)}_1
+a_1^{(1)} = \sum_{i = 1}^{4} w_{i,1}x_i
 $$
 
 This means that the first node of the first hidden layer: $a_1^{(1)}$, is a weighted sum
