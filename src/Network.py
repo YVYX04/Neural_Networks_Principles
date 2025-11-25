@@ -40,28 +40,40 @@ class Network:
         """
 
         for W, b in zip(self.weights_, self.bias_):
-            a_next = W @ a + b
-            a_next = utils.sigmoid(a_next)
+            a = W @ a + b
+            a = utils.sigmoid(a)
 
-        return a_next
+        return a
     
     # Stochastic Gradient Descent method
     def SGD(self, training_data, epochs, mini_batch_size, eta, test_data=None):
-        """
-        Train the neural network using mini-batch stochastic gradient descent.
-        """
+        """Train the neural network using mini-batch stochastic
+        gradient descent.  The ``training_data`` is a list of tuples
+        ``(x, y)`` representing the training inputs and the desired
+        outputs.  The other non-optional parameters are
+        self-explanatory.  If ``test_data`` is provided then the
+        network will be evaluated against the test data after each
+        epoch, and partial progress printed out.  This is useful for
+        tracking progress, but slows things down substantially."""
+        if test_data: n_test = len(test_data)
         n = len(training_data)
-        if test_data:
-            n_test = len(test_data)
+        for j in range(epochs):
+            # shuffle the training data before creating mini-batches
+            rd.shuffle(training_data)
 
-        # shuffle the training data
-        rd.shuffle(training_data)
-
-        # split the data in different mini bacthes
-        mini_batches = [training_data[k:k+mini_batch_size] for k in range(0, n, mini_batch_size)]
-
-        # update the paramter theta based on the mini batches
-        self.update_mini_bacthes(mini_batches, eta) # eta still the learning rate
+            # create the mini-batches
+            mini_batches = [
+                training_data[k:k+mini_batch_size]
+                for k in range(0, n, mini_batch_size)]
+            
+            # update the parameters for each mini-batch
+            for mini_batch in mini_batches:
+                self.update_mini_batch(mini_batch, eta)
+            
+            # evaluate the network on the test data
+            if test_data:
+                print(f"Epoch {j}: {self.evaluate(test_data)} / {n_test}")
+                print(f"Epoch {j} complete")
 
     # update paramters based on the mini batches
     def update_mini_batches(self, mini_batch, eta):
@@ -97,7 +109,21 @@ class Network:
         """
         return (x, y)
     
-    # other functions
+    # evaluate
+    def evaluate(self, test_data):
+        """
+        Return the number of test inputs for which the neural
+        network outputs the correct result. Note that the neural
+        network's output is assumed to be the index of whichever
+        neuron in the final layer has the highest activation.
+        """
+        # compute the test_results (x, y) is a tupple
+        test_results = [(np.argmax(self.feedforward(x)), y) for (x, y) in test_data]
+
+        # compute the number of correct predictions
+        return sum(int(x == y) for (x, y) in test_results)
+
+        
 
 
 
