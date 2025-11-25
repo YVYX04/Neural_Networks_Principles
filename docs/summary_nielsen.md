@@ -300,7 +300,11 @@ Specifically for neural networks ($i \in \{1, \cdots, n\}$) :
 - $\mathbf{\hat y}, \mathbf{y}$: estimated output vector, output vector
 
 
-**Network**
+#### The Foundations of the `Network` Class
+
+With the concepts we have discovered above, we are already able to code the structure (i.e. member variables) of a
+class called `Network` (for those reading these lines, I recommend checking what *OOP* is if the concept of class is unclear).
+Then, we will also code some methods for this class.
 
 First, we create the skeleton of the `Network` class member variable:
 
@@ -356,9 +360,9 @@ $\mathbf{a}^{(1)}$. This means that:
 $$
 \mathbf{a^{(1)}} = 
 \begin{bmatrix}
-a_1^{(1)} + b^{(1)}_1 \\
-a_2^{(1)} + b^{(1)}_2 \\
-a_3^{(1)} + b^{(1)}_3 \\
+a_1^{(1)}  \\
+a_2^{(1)}  \\
+a_3^{(1)} \\
 \end{bmatrix}
 = W^{(1)}\mathbf{x} + b^{(1)}
 $$
@@ -366,7 +370,7 @@ $$
 where we have:
 
 $$
-a_1^{(1)} = \sum_{i = 1}^{4} w_{i,1}x_i
+a_1^{(1)} = \sum_{i = 1}^{4} w_{i,1}x_i + b^{(1)}_1
 $$
 
 This means that the first node of the first hidden layer: $a_1^{(1)}$, is a weighted sum
@@ -377,7 +381,82 @@ $$
 $$
 
 where $\sigma(\cdot)$ is applied elementwise (we vectorize the function). In the output
-layer, the sigmoid can be replaced by a softmax function.
+layer, the sigmoid can be replaced by a softmax function. This mechanism is exactly what our `feedforward()`
+method of the class `Network` will accomplish:
+
+```python
+# feedforward method
+def feedforward(self, a):
+   """Return the output of the network if ``a`` is input."""
+   for W, b in zip(self.weights_, self.bias_):
+      a = W @ a + b
+      a = utils.sigmoid(a)
+
+   return a
+```
+
+Once that this method has been created, we build one of the piece of the learning algorithm, the method `SGD`
+
+```python
+# Stochastic Gradient Descent method
+def SGD(self, training_data, epochs, mini_batch_size, eta, test_data=None):
+"""Train the neural network using mini-batch stochastic
+gradient descent.  The ``training_data`` is a list of tuples
+``(x, y)`` representing the training inputs and the desired
+outputs.  The other non-optional parameters are
+self-explanatory.  If ``test_data`` is provided then the
+network will be evaluated against the test data after each
+epoch, and partial progress printed out.  This is useful for
+tracking progress, but slows things down substantially."""
+if test_data: n_test = len(test_data)
+n = len(training_data)
+for j in range(epochs):
+   # shuffle the training data before creating mini-batches
+   rd.shuffle(training_data)
+   
+   # create the mini-batches
+   mini_batches = [
+         training_data[k:k+mini_batch_size]
+         for k in range(0, n, mini_batch_size)]
+   
+   # update the parameters for each mini-batch
+   for mini_batch in mini_batches:
+         self.update_mini_batch(mini_batch, eta)
+   
+   # evaluate the network on the test data
+   if test_data:
+         print(f"Epoch {j}: {self.evaluate(test_data)} / {n_test}")
+         print(f"Epoch {j} complete")
+
+```
+
+The attentive reader will note that we are using two other methods in this function: `evaluate()` and `update_mini_batch()`.
+To understand how the second method is coded, we need to wait until the next chapter on backpropagation. However, the implementation of `evaluate()` is fairly simple. We have the test data populated of tupples `(x, y)` with the features (i.e. the $784$ input pixels, and the target $y$, which is an int corresponding to the label of the digit). Hence, we implement the function as:
+
+```python
+# evaluate
+    def evaluate(self, test_data):
+        """
+        Return the number of test inputs for which the neural
+        network outputs the correct result. Note that the neural
+        network's output is assumed to be the index of whichever
+        neuron in the final layer has the highest activation.
+        """
+        # compute the test_results (x, y) is a tupple
+        test_results = [(np.argmax(self.feedforward(x)), y) for (x, y) in test_data]
+
+        # compute the number of correct predictions
+        return sum(int(x == y) for (x, y) in test_results)
+```
+
+Up to this point, we have already made quite some progress but we are not there yet. We still need to have an algorithm able to correctly update the weights and biases of the Network based on the cost function. This is the focus of the second chapter.
+
+
+## 2. The Backpropagation Algorithm
+
+In this section, we uncover how the backpropagation algorithm. Subsequently, we will be able to implement the methods that are missing to our class `Network` for tackling the classification problem we face.
+
+
 
 
 ## References
