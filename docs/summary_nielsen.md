@@ -268,11 +268,11 @@ $$
 $$
 
 3. **Parameter update rule**  
-   Update the parameters in the direction of steepest descent with learning rate \$\eta$:
+   Update the parameters in the direction of steepest descent with learning rate $\eta$:
 
 $$
 \theta_{t+1}
-= \theta_t - \eta\,\nabla C(\theta_t).
+= \theta_t - \eta\,\nabla C(\theta_t). 
 $$
 
 4. **Iteration / early stopping**  
@@ -400,14 +400,16 @@ Once that this method has been created, we build one of the piece of the learnin
 ```python
 # Stochastic Gradient Descent method
 def SGD(self, training_data, epochs, mini_batch_size, eta, test_data=None):
-"""Train the neural network using mini-batch stochastic
+"""
+Train the neural network using mini-batch stochastic
 gradient descent.  The ``training_data`` is a list of tuples
 ``(x, y)`` representing the training inputs and the desired
 outputs.  The other non-optional parameters are
 self-explanatory.  If ``test_data`` is provided then the
 network will be evaluated against the test data after each
 epoch, and partial progress printed out.  This is useful for
-tracking progress, but slows things down substantially."""
+tracking progress, but slows things down substantially.
+"""
 if test_data: n_test = len(test_data)
 n = len(training_data)
 for j in range(epochs):
@@ -454,11 +456,126 @@ Up to this point, we have already made quite some progress but we are not there 
 
 ## 2. The Backpropagation Algorithm
 
-In this section, we uncover how the backpropagation algorithm. Subsequently, we will be able to implement the methods that are missing to our class `Network` for tackling the classification problem we face.
+In this section, we uncover how the backpropagation algorithm. Subsequently, we will be able to implement the methods that are missing to our class `Network` for tackling the classification problem we face. The backpropagation algorithm was originally introduced by Rumelhart et al. (1986) in a famous paper called *Learning representations by back-propagating errors*. This paper results where a landmark in machine learning because the algorithm allowed to train artificial neural networks (ANNs) way more efficiently than before. 
 
+### 2.1. A Matrix Based Approach
 
+First, let us recall an important notation, as presented by Nielsen (2015): $w_{jk}^l$ will denote the weight for the connection between the $k$-th neuron in the $l-1$ layer and the $j$-th neuron in the $l$ layer. It is also important to note that when we vectorize a function, we simply do this with the vector $\mathbf{v}$ and the function $f$:
 
+$$
+f(\mathbf{v}) = f(
+\begin{bmatrix}
+v_0 \\
+v_1 \\
+\vdots \
+v_n
+\end{bmatrix}
+) = 
+\begin{bmatrix}
+f(v_0) \\
+f(v_1) \\
+\vdots \
+f(v_n)
+\end{bmatrix}
+$$
+
+With this in mind, we can write in matrix form, of we go from the hidden layer $\mathbf{a}^{(i - 1)}$ to the hidden layer $\mathbf{a}^{(i)}$:
+
+$$
+\mathbf{a}^{(i)} = \sigma(W^{(i)}\mathbf{a}^{(i - 1)} + \mathbf{b}^{(i)})
+$$
+
+The reader will notice that I strictly follow the notation I outlined in section 1.7. It is also useful to note that sometimes, before applying $\sigma(\cdot)$, we call $\mathbf{z}^{(i)}$, as defined by:
+
+$$
+\mathbf{z}^{(i)} := W^{(i)}\mathbf{a}^{(i - 1)} + \mathbf{b}^{(i)}
+$$
+
+the *weighted input*. Indeed, since ANNs can also be developed with a different activation function than the sigmoid, it is always important to have that $\mathbf{z}^{(i)}$ in mind.
+
+### 2.2. Assumptions About the Cost Function
+
+The goal of the backpropagation algorithm is to compute the gradient of the cost function with respect to all the weights matrices $W^{(i)}$ and biases $\mathbf{b}^{(i)}$ in the network. In this section we will use the quadratic cost function and compute the *average loss* of our network on all the $n$ training instances $(\mathbf{x}^{(i)}, \mathbf{y}^{(i)})$ where, as per my notation, $\mathbf{x}^{(i)}$ is the $i$-th input vector and $\mathbf{y}^{(i)}$ is the associated $i$-th target vector of the training batch. Therefore, the quadratic cost has the form:
+
+$$
+C = \frac{1}{2n} \sum_{i = 1}^{n} \| \mathbf{y} - \mathbf{a}^{(L)}(\mathbf{x}^{(i)}) \|^2
+$$
+
+where $\mathbf{a}^{(L)}(\mathbf{x}^{(i)})$ is equivalent to $\mathbf{\hat y}$ since $L$ is the number of layers in the network and $\mathbf{a}^{(L)}(\mathbf{x}^{(i)})$ is the activated output of the network when $\mathbf{x}^{(i)}$ was the input.
+
+The first assumption we are making for backpropagation to work is that the cost function can be written as an average $C = \frac{1}{n} \sum_{\mathbf{x}^{(i)}} C_{\mathbf{x}^{(i)}}$ over cost functions $C_{\mathbf{x}^{(i)}}$. This allows us to estimate the cost over all the $n$ training observations we have.
+
+The second assumption is that the cost function $C$ can be written as a
+function $C(\cdot)$ of the output from the neural network. Evidently, this requirement is also satisfied with our selected cost function.
+
+### 2.3. The Hadamard Product
+
+Following Nielsen (2015), I also briefly present the *Hadamard product* $A \odot B$ since we will rely on it later. The Hadamard product is also well-known as the *element-wise product* and it is generally defined for two matrices of the same dimensions and return a matrix of the same dimensions. It is computed as follows:
+
+$$
+A \odot B =
+\begin{bmatrix}
+ a_{11} & a_{12} \\
+ a_{21} & a_{22}
+\end{bmatrix}
+\odot 
+\begin{bmatrix}
+ b_{11} & b_{12} \\
+ b_{21} & b_{22}
+\end{bmatrix}
+=
+\begin{bmatrix}
+ a_{11}b_{11} & a_{12}b_{12} \\
+ a_{21}b_{21} & a_{22}b_{22}
+\end{bmatrix}.
+$$
+
+More generally, for matrices $A,B \in \mathbb{R}^{m\times n}$ of the same dimensions, the Hadamard product is defined componentwise by
+
+$$
+(A \odot B)_{ij} = A_{ij} B_{ij}, \qquad i=1,\ldots,m,\; j=1,\ldots,n.
+$$
+
+### 2.4. The Four Fundamental Equations Behind Backpropagation
+
+To develop the entire backpropagation algorithm, we must chunk the problem into sub-components. The first of those components is the *error* $\delta_j^{(l)}$ in the $j$-th neuron in the $l$-th layer. The error is defined as:
+
+$$
+\delta_j^{(l)} = \frac{\partial C}{\partial z_j^{(l)}}
+$$
+
+Here, we can interpret $\delta_j^l$ as a quantitative indication of how much this un-activated input $z_j^l$ contributed to the total cost of the network. If $\frac{\partial C}{\partial z_j^{(l)}}$ is large and positive, this means that a small $\Delta z_j^{(l)} > 0$ can drastically increase the cost $C$. On the opposite, if we find a "smart" way to tweak the weights $W^{(l)}$ and biases $b^{(l)}$ to obtain $\Delta z_j^{(l)} < 0$, we could reduce $C$ also quite drastically! We thereby understand that the error $\delta_j^{(l)}$ will play a central role in the backpropagation algorithm. Finally, $\delta^{(l)}$ is to be understood as the vector of errors in layer $l$.
+
+Now that we have defined the error, I present, again following the line taken by Nielsen (2015) the four fundamental equations behind backpropagation.
+
+#### BP1. Error $\delta^{(L)}$ in the Output Layer
+
+The components of $\delta^{(L)}$ are given by **BP1**:
+
+$$
+\delta_j^{(L)} = \frac{\partial C}{\partial z_j^{(L)}} = \frac{\partial C}{\partial a_j^{(l)}} \sigma'(z_j^{(L)})
+$$
+
+The first term on the right, $\partial C / \partial a_j^{(l)}$ measures how fast the cost is changing as a function of the $j$-th output activation. The second term on the right measures how fast the activation function $\sigma$ is changing at $z^{(L)}_j$.
+We could also note that:
+
+$$
+z_j^{(L)} = \ln \Bigl( \frac{a_j^{(L)}}{1 - a_j^{(L)}} \Bigr) \quad  \text{since} \quad a_j^{(L)} = \sigma(z_j^{(L)})
+$$
+
+In matrix form, this gives:
+
+$$
+\delta^{(L)} = \nabla_\mathbf{a} C \odot \sigma'(\mathbf{z}^{(L)})
+$$
+
+where $\nabla_{\mathbf{a}^{(L)}} C$ is the gradient of $C$ with respect to $\mathbf{a}^{(L)}$. We therefore finally end up with the error vector $\delta^{(L)}$ that provides use with very precious information on how we should update the weights and biases of the network, both with respect to the magnitude and direction of those changes, at least in an indirect manner. Now that we are able to compute $\delta^{(L)}$ we should focus on how to compute the error vector of the other layer, i.e. working *backward* to the input layer! This is what the second equation, **BP2** tells us.
+
+#### BP2. Going Backward in the Network: from $\delta^{(l)}$ to $\delta^{(l - 1)}$
+
+Aa.
 
 ## References
 
 - Nielsen, M. A. (2015). *Neural Networks and Deep Learning*. Determination Press. http://neuralnetworksanddeeplearning.com/
+- Rumelhart, D. E., Hinton, G. E., & Williams, R. J. (1986). Learning representations by back-propagating errors. *Nature*, 323(6088), 533-536.
